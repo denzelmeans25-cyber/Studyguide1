@@ -1,0 +1,1148 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 3 Math Adventure: Measuring & Patterns</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 50%, #dcfce7 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Fredoka', sans-serif;
+        }
+        .bounce-hover:hover {
+            transform: translateY(-3px) scale(1.02);
+        }
+        .bounce-hover:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            70% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes floatStar {
+            0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(180deg) scale(1.5); opacity: 0; }
+        }
+        .confetti-star {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatStar 1.1s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col">
+
+    <!-- Top Navigation & Star Counter -->
+    <header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-40 border-b-4 border-sky-300">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <button onclick="goHome()" class="flex items-center gap-2 text-left group focus:outline-none">
+                <div class="bg-amber-400 text-white p-2 rounded-2xl shadow-sm group-hover:rotate-6 transition-transform text-2xl">
+                    📏
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-sky-700 leading-tight">Unit 3 Math Adventure</h1>
+                    <p class="text-xs sm:text-sm font-bold text-slate-500">Grade 2: Measuring & Patterns</p>
+                </div>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-100 border-2 border-amber-400 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-inner">
+                    <span class="text-xl">⭐</span>
+                    <span id="total-stars" class="font-display font-bold text-lg text-amber-800">0</span>
+                </div>
+                <button id="home-btn" onclick="goHome()" class="hidden bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-4 py-2 rounded-2xl border-2 border-sky-300 transition text-sm sm:text-base">
+                    🏠 Menu
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main id="app-container" class="flex-1 max-w-4xl w-full mx-auto px-4 py-6 flex flex-col justify-center">
+        <!-- Dynamic Content Rendered Here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-slate-500 text-xs font-semibold">
+        Grade 2 Math • Unit 3 Standards: 2.MDR.5.1 • 2.MDR.5.2 • 2.MDR.5.3 • 2.MDR.5.5 • 2.PAR.4.2
+    </footer>
+
+    <script>
+        // ==========================================
+        // APP STATE & CONFIGURATION
+        // ==========================================
+        const STATE = {
+            totalStars: 0,
+            skillStars: {
+                1: 0,
+                2: 0,
+                3: 0,
+                4: 0,
+                5: 0
+            },
+            mode: 'home', // 'home', 'quiz', 'summary'
+            currentSkillId: null, // 1..5 or 'mix'
+            questions: [],
+            currentIdx: 0,
+            sessionScore: 0,
+            missedQuestions: [],
+            answeredCurrent: false,
+            // Interactive helper states per question
+            nlPosition: 0,
+            nlJumps: [],
+            showSubHelper: false
+        };
+
+        const SKILLS = [
+            {
+                id: 1,
+                code: '2.MDR.5.1',
+                title: 'Ruler & Inch Tiles',
+                desc: 'Measure objects using inch square tiles and rulers!',
+                icon: '📐',
+                color: 'bg-sky-500',
+                lightColor: 'bg-sky-50 border-sky-300 text-sky-900',
+                badgeColor: 'bg-sky-200 text-sky-900'
+            },
+            {
+                id: 2,
+                code: '2.MDR.5.2',
+                title: 'Right Tool & Estimate',
+                desc: 'Choose inches, feet, or yards and make smart estimates!',
+                icon: '🧰',
+                color: 'bg-emerald-500',
+                lightColor: 'bg-emerald-50 border-emerald-300 text-emerald-900',
+                badgeColor: 'bg-emerald-200 text-emerald-900'
+            },
+            {
+                id: 3,
+                code: '2.MDR.5.3',
+                title: 'How Much Longer?',
+                desc: 'Compare two objects and find the length difference!',
+                icon: '🦜',
+                color: 'bg-purple-500',
+                lightColor: 'bg-purple-50 border-purple-300 text-purple-900',
+                badgeColor: 'bg-purple-200 text-purple-900'
+            },
+            {
+                id: 4,
+                code: '2.MDR.5.5',
+                title: 'Number Line Jumps',
+                desc: 'Hop on the number line to add and subtract lengths!',
+                icon: '🐸',
+                color: 'bg-orange-500',
+                lightColor: 'bg-orange-50 border-orange-300 text-orange-900',
+                badgeColor: 'bg-orange-200 text-orange-900'
+            },
+            {
+                id: 5,
+                code: '2.PAR.4.2',
+                title: 'Growing & Shrinking Patterns',
+                desc: 'Spot the pattern rule with shapes and numbers up to 20!',
+                icon: '🔷',
+                color: 'bg-rose-500',
+                lightColor: 'bg-rose-50 border-rose-300 text-rose-900',
+                badgeColor: 'bg-rose-200 text-rose-900'
+            }
+        ];
+
+        // ==========================================
+        // UTILITY & CELEBRATION EFFECTS
+        // ==========================================
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function shuffle(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function spawnStars(x, y) {
+            const emojis = ['⭐', '🌟', '✨', '🎉', '💫'];
+            for (let i = 0; i < 12; i++) {
+                const el = document.createElement('div');
+                el.className = 'confetti-star text-2xl sm:text-3xl';
+                el.textContent = emojis[randInt(0, emojis.length - 1)];
+                const offsetX = randInt(-100, 100);
+                const offsetY = randInt(-30, 30);
+                el.style.left = `${(x || window.innerWidth / 2) + offsetX}px`;
+                el.style.top = `${(y || window.innerHeight / 2) + offsetY}px`;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1100);
+            }
+        }
+
+        function updateStarCounter() {
+            document.getElementById('total-stars').textContent = STATE.totalStars;
+        }
+
+        // ==========================================
+        // QUESTION GENERATORS (ALL 5 STANDARDS)
+        // ==========================================
+
+        // Skill 1: 2.MDR.5.1 - Ruler & Inch Square Tiles
+        function genSkill1Question() {
+            const objects = [
+                { name: 'marker', color: '#3b82f6', tip: '#1d4ed8', type: 'marker' },
+                { name: 'crayon', color: '#ef4444', tip: '#b91c1c', type: 'crayon' },
+                { name: 'pencil', color: '#f59e0b', tip: '#fcd34d', type: 'pencil' },
+                { name: 'paintbrush', color: '#10b981', tip: '#047857', type: 'brush' },
+                { name: 'toy car', color: '#8b5cf6', tip: '#6d28d9', type: 'car' }
+            ];
+            const obj = objects[randInt(0, objects.length - 1)];
+            const useTilesOnly = Math.random() < 0.45;
+            const startInch = (!useTilesOnly && Math.random() < 0.35) ? randInt(1, 2) : 0;
+            const length = randInt(3, 7);
+            const endInch = startInch + length;
+
+            const choicesSet = new Set([length]);
+            while (choicesSet.size < 4) {
+                let wrong = length + randInt(-2, 3);
+                if (wrong > 0 && wrong !== length) choicesSet.add(wrong);
+                if (startInch > 0 && choicesSet.size < 4) choicesSet.add(endInch); // common mistake: reading end number
+            }
+            const options = shuffle([...choicesSet]).map(v => `${v} inches`);
+
+            return {
+                skillId: 1,
+                type: 'mc',
+                prompt: useTilesOnly
+                    ? `Each square tile is 1 inch long. How many inches long is the ${obj.name}?`
+                    : `Use the ruler${startInch === 0 ? ' and 1-inch tiles' : ''} to measure the ${obj.name} to the nearest inch.`,
+                visualData: { obj, startInch, length, endInch, useTilesOnly },
+                options,
+                answer: `${length} inches`,
+                hint: startInch === 0
+                    ? `Count each 1-inch space from 0 all the way to the end of the ${obj.name}. There are ${length} inches!`
+                    : `Notice the ${obj.name} starts at ${startInch} and ends at ${endInch}. Subtract ${endInch} - ${startInch} = ${length} inches!`
+            };
+        }
+
+        // Skill 2: 2.MDR.5.2 - Tool Selection & Reasonable Estimation
+        function genSkill2Question() {
+            const bank = [
+                {
+                    prompt: "Which tool and unit are BEST for measuring the width of a spiral notebook?",
+                    options: ["A ruler (in inches)", "A yardstick (in yards)", "A measuring tape (in miles)", "A scale (in pounds)"],
+                    answer: "A ruler (in inches)",
+                    hint: "A notebook is small enough to fit on your desk! A 12-inch ruler measures small objects in inches."
+                },
+                {
+                    prompt: "Which tool and unit are BEST for measuring the length of our whole classroom?",
+                    options: ["A yardstick (in yards)", "A 6-inch ruler (in inches)", "A thermometer (in degrees)", "One square inch tile"],
+                    answer: "A yardstick (in yards)",
+                    hint: "A classroom is a big distance! Using a yardstick to measure in yards is much faster than using tiny inches."
+                },
+                {
+                    prompt: "About how tall is a living room TV?",
+                    options: ["About 3 feet tall", "About 3 inches tall", "About 30 yards tall", "About 36 feet tall"],
+                    answer: "About 3 feet tall",
+                    hint: "Think about a ruler (1 foot). Three rulers stacked up is about the height of a TV!"
+                },
+                {
+                    prompt: "About how tall is a 3-story school building?",
+                    options: ["About 36 feet tall", "About 36 inches tall", "About 3 feet tall", "About 2 yards tall"],
+                    answer: "About 36 feet tall",
+                    hint: "36 inches is only 3 feet (the height of a table). A tall building is around 36 feet tall!"
+                },
+                {
+                    prompt: "Which is the best estimate for the length of a brand new pencil?",
+                    options: ["About 7 inches", "About 7 feet", "About 7 yards", "About 1 inch"],
+                    answer: "About 7 inches",
+                    hint: "A pencil easily fits inside a 12-inch ruler. 7 feet would be taller than a grown-up!"
+                },
+                {
+                    prompt: "Maya wants to measure around a round basketball. Which tool works BEST?",
+                    options: ["A flexible measuring tape", "A wooden yardstick", "A flat plastic ruler", "Square pattern blocks"],
+                    answer: "A flexible measuring tape",
+                    hint: "A basketball is curved! A flexible measuring tape can bend around curved shapes."
+                },
+                {
+                    prompt: "About how wide is a classroom door?",
+                    options: ["About 1 yard (3 feet)", "About 1 inch", "About 15 yards", "About 50 feet"],
+                    answer: "About 1 yard (3 feet)",
+                    hint: "A standard doorway is roughly 3 feet wide, which equals 1 yard!"
+                }
+            ];
+            const item = bank[randInt(0, bank.length - 1)];
+            return {
+                skillId: 2,
+                type: 'mc',
+                prompt: item.prompt,
+                visualData: { icon: '📏' },
+                options: shuffle(item.options),
+                answer: item.answer,
+                hint: item.hint
+            };
+        }
+
+        // Skill 3: 2.MDR.5.3 - Compare Length Differences ("How much longer?")
+        function genSkill3Question() {
+            const scenarios = [
+                {
+                    itemA: { name: 'Blue Parakeet', len: randInt(5, 9), color: '#3b82f6', emoji: '🐦' },
+                    itemB: { name: 'Green Parakeet', len: randInt(12, 18), color: '#10b981', emoji: '🦜' },
+                    unit: 'inches'
+                },
+                {
+                    itemA: { name: 'Red Ribbon', len: randInt(6, 11), color: '#ef4444', emoji: '🎀' },
+                    itemB: { name: 'Purple Ribbon', len: randInt(14, 22), color: '#8b5cf6', emoji: '🎗️' },
+                    unit: 'inches'
+                },
+                {
+                    itemA: { name: 'Toy Train', len: randInt(8, 13), color: '#f59e0b', emoji: '🚂' },
+                    itemB: { name: 'School Bus', len: randInt(17, 25), color: '#eab308', emoji: '🚌' },
+                    unit: 'feet'
+                },
+                {
+                    itemA: { name: 'Garden Snake', len: randInt(10, 15), color: '#14b8a6', emoji: '🐍' },
+                    itemB: { name: 'Alligator', len: randInt(20, 29), color: '#16a34a', emoji: '🐊' },
+                    unit: 'inches'
+                }
+            ];
+            const sc = scenarios[randInt(0, scenarios.length - 1)];
+            const diff = sc.itemB.len - sc.itemA.len;
+
+            const choicesSet = new Set([diff]);
+            while (choicesSet.size < 4) {
+                let wrong = diff + randInt(-3, 4);
+                if (wrong > 0 && wrong !== diff) choicesSet.add(wrong);
+                if (choicesSet.size < 4) choicesSet.add(sc.itemA.len + sc.itemB.len); // common mistake: adding instead of subtracting
+            }
+
+            return {
+                skillId: 3,
+                type: 'mc',
+                prompt: `The ${sc.itemA.name} is ${sc.itemA.len} ${sc.unit} long. The ${sc.itemB.name} is ${sc.itemB.len} ${sc.unit} long. How much longer is the ${sc.itemB.name}?`,
+                visualData: sc,
+                options: shuffle([...choicesSet]).map(v => `${v} ${sc.unit}`),
+                answer: `${diff} ${sc.unit}`,
+                hint: `To find "how much longer," subtract the shorter length from the longer length: ${sc.itemB.len} - ${sc.itemA.len} = ${diff} ${sc.unit}.`
+            };
+        }
+
+        // Skill 4: 2.MDR.5.5 - Sums & Differences on a Number Line
+        function genSkill4Question() {
+            const isSubtraction = Math.random() < 0.65;
+            if (isSubtraction) {
+                const start = randInt(32, 54);
+                const diff = randInt(6, 14);
+                const end = start + diff;
+                const contexts = [
+                    `We grabbed ${end} cubes in 15 seconds, and our friends grabbed ${start} cubes. How many more cubes did we grab?`,
+                    `A frog jumped from inch ${start} to inch ${end} on a giant number line. How many inches did the frog jump?`,
+                    `Leo's string is ${end} inches long and Mia's string is ${start} inches long. What is the difference in their lengths?`
+                ];
+                const choicesSet = new Set([diff]);
+                while (choicesSet.size < 4) {
+                    let w = diff + randInt(-3, 4);
+                    if (w > 0 && w !== diff) choicesSet.add(w);
+                }
+                return {
+                    skillId: 4,
+                    type: 'numberline',
+                    mode: 'diff',
+                    startVal: start,
+                    targetVal: end,
+                    minLine: Math.max(0, start - 3),
+                    maxLine: end + 3,
+                    prompt: contexts[randInt(0, contexts.length - 1)],
+                    options: shuffle([...choicesSet]),
+                    answer: diff,
+                    hint: `Start at ${start} on the number line and hop up to ${end}. Count your hops: ${end} - ${start} = ${diff}!`
+                };
+            } else {
+                const start = randInt(22, 42);
+                const addVal = randInt(7, 15);
+                const total = start + addVal;
+                const choicesSet = new Set([total]);
+                while (choicesSet.size < 4) {
+                    let w = total + randInt(-4, 4);
+                    if (w > 0 && w !== total) choicesSet.add(w);
+                }
+                return {
+                    skillId: 4,
+                    type: 'numberline',
+                    mode: 'sum',
+                    startVal: start,
+                    addVal: addVal,
+                    targetVal: total,
+                    minLine: Math.max(0, start - 2),
+                    maxLine: total + 3,
+                    prompt: `A caterpillar crawled ${start} inches, rested, and then crawled ${addVal} more inches. Where is it on the number line now?`,
+                    options: shuffle([...choicesSet]),
+                    answer: total,
+                    hint: `Start at ${start} and hop forward ${addVal} spaces (${start} + ${addVal} = ${total}).`
+                };
+            }
+        }
+
+        // Skill 5: 2.PAR.4.2 - Growing & Shrinking Patterns (up to 20)
+        function genSkill5Question() {
+            const isVisualHexagon = Math.random() < 0.5;
+            if (isVisualHexagon) {
+                const startTriangles = randInt(1, 3);
+                const step = 1;
+                const nextCount = startTriangles + 3;
+                const choicesSet = new Set([nextCount]);
+                while (choicesSet.size < 4) {
+                    let w = randInt(1, 6);
+                    if (w !== nextCount) choicesSet.add(w);
+                }
+                return {
+                    skillId: 5,
+                    type: 'pattern-shape',
+                    prompt: `Look at how the hexagon pattern grows! How many green triangles will be on the 4th shape?`,
+                    visualData: { startTriangles, step },
+                    options: shuffle([...choicesSet]).map(n => `${n} green triangles`),
+                    answer: `${nextCount} green triangles`,
+                    hint: `Each step adds 1 green triangle to a side of the hexagon (${startTriangles}, ${startTriangles + 1}, ${startTriangles + 2}...). Next is ${nextCount}!`
+                };
+            } else {
+                const isGrowing = Math.random() < 0.55;
+                if (isGrowing) {
+                    const step = randInt(2, 4);
+                    const start = randInt(2, 6);
+                    const seq = [start, start + step, start + step * 2, start + step * 3];
+                    const nextVal = start + step * 4;
+                    const choicesSet = new Set([nextVal]);
+                    while (choicesSet.size < 4) {
+                        let w = nextVal + randInt(-3, 4);
+                        if (w > 0 && w <= 20 && w !== nextVal) choicesSet.add(w);
+                    }
+                    return {
+                        skillId: 5,
+                        type: 'pattern-num',
+                        prompt: `Find the rule for this growing pattern! What number comes next?`,
+                        visualData: { seq, rule: `+${step}` },
+                        options: shuffle([...choicesSet]),
+                        answer: nextVal,
+                        hint: `Look at how much is added each time: ${seq[0]} + ${step} = ${seq[1]}. Add ${step} to ${seq[3]} to get ${nextVal}!`
+                    };
+                } else {
+                    const step = randInt(2, 3);
+                    const start = randInt(15, 20);
+                    const seq = [start, start - step, start - step * 2, start - step * 3];
+                    const nextVal = start - step * 4;
+                    const choicesSet = new Set([nextVal]);
+                    while (choicesSet.size < 4) {
+                        let w = nextVal + randInt(-2, 4);
+                        if (w >= 0 && w !== nextVal) choicesSet.add(w);
+                    }
+                    return {
+                        skillId: 5,
+                        type: 'pattern-num',
+                        prompt: `Find the rule for this shrinking pattern! What number comes next?`,
+                        visualData: { seq, rule: `-${step}` },
+                        options: shuffle([...choicesSet]),
+                        answer: nextVal,
+                        hint: `The numbers are shrinking by ${step} each time (${seq[0]} - ${step} = ${seq[1]}). Subtract ${step} from ${seq[3]} to get ${nextVal}!`
+                    };
+                }
+            }
+        }
+
+        function generateQuestionForSkill(skillId) {
+            switch (skillId) {
+                case 1: return genSkill1Question();
+                case 2: return genSkill2Question();
+                case 3: return genSkill3Question();
+                case 4: return genSkill4Question();
+                case 5: return genSkill5Question();
+                default: return genSkill1Question();
+            }
+        }
+
+        // ==========================================
+        // NAVIGATION & SESSION MANAGEMENT
+        // ==========================================
+        function goHome() {
+            STATE.mode = 'home';
+            document.getElementById('home-btn').classList.add('hidden');
+            render();
+        }
+
+        function startSkill(skillId) {
+            STATE.currentSkillId = skillId;
+            STATE.mode = 'quiz';
+            STATE.currentIdx = 0;
+            STATE.sessionScore = 0;
+            STATE.missedQuestions = [];
+            STATE.questions = [];
+
+            if (skillId === 'mix') {
+                // 2 questions per skill = 10 questions
+                [1, 2, 3, 4, 5].forEach(id => {
+                    STATE.questions.push(generateQuestionForSkill(id));
+                    STATE.questions.push(generateQuestionForSkill(id));
+                });
+                STATE.questions = shuffle(STATE.questions);
+            } else {
+                for (let i = 0; i < 5; i++) {
+                    STATE.questions.push(generateQuestionForSkill(skillId));
+                }
+            }
+
+            setupQuestionState();
+            document.getElementById('home-btn').classList.remove('hidden');
+            render();
+        }
+
+        function retryMissed() {
+            if (STATE.missedQuestions.length === 0) return;
+            STATE.questions = shuffle([...STATE.missedQuestions]);
+            STATE.missedQuestions = [];
+            STATE.currentIdx = 0;
+            STATE.sessionScore = 0;
+            STATE.mode = 'quiz';
+            setupQuestionState();
+            render();
+        }
+
+        function setupQuestionState() {
+            const q = STATE.questions[STATE.currentIdx];
+            STATE.answeredCurrent = false;
+            STATE.showSubHelper = false;
+            if (q && q.type === 'numberline') {
+                STATE.nlPosition = q.startVal;
+                STATE.nlJumps = [];
+            }
+        }
+
+        // ==========================================
+        // SVG & VISUAL RENDERERS
+        // ==========================================
+        function renderRulerSVG(data) {
+            const { obj, startInch, length, endInch, useTilesOnly } = data;
+            const maxInches = 9;
+            const pxPerInch = 62;
+            const leftPad = 30;
+            const svgWidth = leftPad * 2 + maxInches * pxPerInch;
+            const startX = leftPad + startInch * pxPerInch;
+            const objWidth = length * pxPerInch;
+
+            let objectGraphic = '';
+            if (obj.type === 'marker') {
+                objectGraphic = `
+                    <g transform="translate(${startX}, 22)">
+                        <rect x="0" y="14" width="22" height="16" rx="3" fill="#475569"/>
+                        <rect x="20" y="6" width="${objWidth - 52}" height="32" rx="6" fill="${obj.color}" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="${objWidth - 32}" y="4" width="32" height="36" rx="4" fill="${obj.tip}" stroke="#1e293b" stroke-width="2.5"/>
+                    </g>`;
+            } else if (obj.type === 'crayon') {
+                objectGraphic = `
+                    <g transform="translate(${startX}, 24)">
+                        <polygon points="0,20 26,6 26,34" fill="${obj.tip}" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="26" y="6" width="${objWidth - 26}" height="28" rx="4" fill="${obj.color}" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="42" y="6" width="12" height="28" fill="#1e293b" opacity="0.25"/>
+                        <rect x="${objWidth - 24}" y="6" width="12" height="28" fill="#1e293b" opacity="0.25"/>
+                    </g>`;
+            } else if (obj.type === 'pencil') {
+                objectGraphic = `
+                    <g transform="translate(${startX}, 26)">
+                        <polygon points="0,18 28,5 28,31" fill="#fde68a" stroke="#1e293b" stroke-width="2.5"/>
+                        <polygon points="0,18 10,13 10,23" fill="#1e293b"/>
+                        <rect x="28" y="5" width="${objWidth - 48}" height="26" fill="${obj.color}" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="${objWidth - 20}" y="5" width="20" height="26" rx="4" fill="#f43f5e" stroke="#1e293b" stroke-width="2.5"/>
+                    </g>`;
+            } else if (obj.type === 'brush') {
+                objectGraphic = `
+                    <g transform="translate(${startX}, 24)">
+                        <path d="M0,20 Q15,2 34,8 L34,32 Q15,38 0,20 Z" fill="#92400e" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="34" y="9" width="18" height="22" fill="#cbd5e1" stroke="#1e293b" stroke-width="2.5"/>
+                        <rect x="52" y="12" width="${objWidth - 52}" height="16" rx="8" fill="${obj.color}" stroke="#1e293b" stroke-width="2.5"/>
+                    </g>`;
+            } else {
+                // Toy car
+                objectGraphic = `
+                    <g transform="translate(${startX}, 16)">
+                        <path d="M12,26 L28,10 L${objWidth - 36},10 L${objWidth - 14},26 L${objWidth},28 L${objWidth},42 L0,42 L0,28 Z" fill="${obj.color}" stroke="#1e293b" stroke-width="2.5"/>
+                        <circle cx="34" cy="43" r="11" fill="#1e293b"/>
+                        <circle cx="34" cy="43" r="5" fill="#cbd5e1"/>
+                        <circle cx="${objWidth - 34}" cy="43" r="11" fill="#1e293b"/>
+                        <circle cx="${objWidth - 34}" cy="43" r="5" fill="#cbd5e1"/>
+                    </g>`;
+            }
+
+            // 1-inch square tiles
+            let tilesGraphic = '';
+            const tileColors = ['#fca5a5', '#fcd34d', '#86efac', '#93c5fd', '#c4b5fd', '#f9a8d4', '#fdba74'];
+            for (let i = 0; i < length; i++) {
+                const tx = startX + i * pxPerInch;
+                const ty = useTilesOnly ? 82 : 146;
+                tilesGraphic += `
+                    <rect x="${tx}" y="${ty}" width="${pxPerInch}" height="44" fill="${tileColors[i % tileColors.length]}" stroke="#1e293b" stroke-width="2.5" rx="4"/>
+                    <text x="${tx + pxPerInch / 2}" y="${ty + 27}" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">1 in</text>
+                `;
+            }
+
+            // Ruler graphic
+            let rulerGraphic = '';
+            if (!useTilesOnly) {
+                rulerGraphic += `<rect x="${leftPad - 10}" y="80" width="${maxInches * pxPerInch + 20}" height="52" rx="6" fill="#fef08a" stroke="#b45309" stroke-width="2.5"/>`;
+                for (let i = 0; i <= maxInches; i++) {
+                    const rx = leftPad + i * pxPerInch;
+                    rulerGraphic += `
+                        <line x1="${rx}" y1="80" x2="${rx}" y2="105" stroke="#78350f" stroke-width="3"/>
+                        <text x="${rx}" y="123" text-anchor="middle" font-size="16" font-weight="800" fill="#78350f">${i}</text>
+                    `;
+                    if (i < maxInches) {
+                        const halfX = rx + pxPerInch / 2;
+                        rulerGraphic += `<line x1="${halfX}" y1="80" x2="${halfX}" y2="95" stroke="#78350f" stroke-width="2"/>`;
+                    }
+                }
+                rulerGraphic += `<text x="${leftPad + 22}" y="102" font-size="11" font-weight="800" fill="#92400e">INCHES</text>`;
+            }
+
+            // Dashed alignment guides
+            const guides = `
+                <line x1="${startX}" y1="15" x2="${startX}" y2="${useTilesOnly ? 130 : 192}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+                <line x1="${startX + objWidth}" y1="15" x2="${startX + objWidth}" y2="${useTilesOnly ? 130 : 192}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+            `;
+
+            const svgHeight = useTilesOnly ? 140 : 202;
+
+            return `
+                <div class="bg-white rounded-3xl p-3 sm:p-4 border-2 border-sky-200 shadow-inner overflow-x-auto">
+                    <svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="w-full min-w-[480px] h-auto mx-auto">
+                        ${objectGraphic}
+                        ${rulerGraphic}
+                        ${tilesGraphic}
+                        ${guides}
+                    </svg>
+                </div>
+            `;
+        }
+
+        function renderComparisonVisual(sc) {
+            const maxVal = Math.max(sc.itemA.len, sc.itemB.len);
+            const pctA = Math.round((sc.itemA.len / maxVal) * 100);
+            const pctB = Math.round((sc.itemB.len / maxVal) * 100);
+
+            return `
+                <div class="bg-white rounded-3xl p-4 sm:p-6 border-2 border-purple-200 shadow-inner space-y-4">
+                    <div>
+                        <div class="flex justify-between font-bold text-base sm:text-lg mb-1">
+                            <span>${sc.itemA.emoji} ${sc.itemA.name}</span>
+                            <span class="px-3 py-0.5 rounded-full bg-slate-100 border border-slate-300">${sc.itemA.len} ${sc.unit}</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-2xl h-9 p-1 border border-slate-200">
+                            <div style="width: ${pctA}%; background-color: ${sc.itemA.color};" class="h-full rounded-xl flex items-center justify-end pr-3 text-white font-bold text-sm transition-all duration-500">
+                                ${sc.itemA.len}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between font-bold text-base sm:text-lg mb-1">
+                            <span>${sc.itemB.emoji} ${sc.itemB.name}</span>
+                            <span class="px-3 py-0.5 rounded-full bg-slate-100 border border-slate-300">${sc.itemB.len} ${sc.unit}</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-2xl h-9 p-1 border border-slate-200">
+                            <div style="width: ${pctB}%; background-color: ${sc.itemB.color};" class="h-full rounded-xl flex items-center justify-end pr-3 text-white font-bold text-sm transition-all duration-500">
+                                ${sc.itemB.len}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <button onclick="toggleSubHelper()" class="text-sm font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 px-3 py-1.5 rounded-xl transition">
+                            ${STATE.showSubHelper ? '🙈 Hide Equation Helper' : '💡 Need a Equation Hint?'}
+                        </button>
+                        ${STATE.showSubHelper ? `
+                            <div class="font-display font-bold text-lg text-purple-900 bg-purple-50 px-4 py-1 rounded-xl border border-purple-300">
+                                ${sc.itemB.len} − ${sc.itemA.len} = ?
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInteractiveNumberLine(q) {
+            const { minLine, maxLine, startVal, targetVal, mode } = q;
+            const totalTicks = maxLine - minLine;
+            const pad = 35;
+            const width = 680;
+            const usableW = width - pad * 2;
+            const stepX = usableW / totalTicks;
+
+            let ticksSVG = '';
+            for (let v = minLine; v <= maxLine; v++) {
+                const x = pad + (v - minLine) * stepX;
+                const isStart = v === startVal;
+                const isTarget = v === targetVal && mode === 'diff';
+                const isCurrent = v === STATE.nlPosition;
+
+                ticksSVG += `
+                    <line x1="${x}" y1="78" x2="${x}" y2="98" stroke="${isStart || isTarget ? '#ea580c' : '#334155'}" stroke-width="${isStart || isTarget ? '3.5' : '2'}"/>
+                    <text x="${x}" y="118" text-anchor="middle" font-size="13" font-weight="${isStart || isTarget || isCurrent ? '800' : '600'}" fill="${isCurrent ? '#ea580c' : '#1e293b'}">${v}</text>
+                `;
+                if (isStart) {
+                    ticksSVG += `<circle cx="${x}" cy="113" r="13" fill="none" stroke="#3b82f6" stroke-width="2.5"/>`;
+                }
+                if (isTarget) {
+                    ticksSVG += `<circle cx="${x}" cy="113" r="13" fill="none" stroke="#16a34a" stroke-width="2.5"/>`;
+                }
+            }
+
+            // Draw jump arcs made by the student
+            let arcsSVG = '';
+            STATE.nlJumps.forEach(jump => {
+                const x1 = pad + (jump.from - minLine) * stepX;
+                const x2 = pad + (jump.to - minLine) * stepX;
+                const midX = (x1 + x2) / 2;
+                const arcHeight = jump.amount >= 5 ? 32 : 52;
+                arcsSVG += `
+                    <path d="M ${x1} 76 Q ${midX} ${arcHeight} ${x2} 76" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="4,2"/>
+                    <rect x="${midX - 16}" y="${arcHeight - 6}" width="32" height="18" rx="6" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+                    <text x="${midX}" y="${arcHeight + 7}" text-anchor="middle" font-size="11" font-weight="800" fill="#c2410c">+${jump.amount}</text>
+                `;
+            });
+
+            // Frog marker at current position
+            const frogX = pad + (STATE.nlPosition - minLine) * stepX;
+            const totalJumped = STATE.nlPosition - startVal;
+
+            return `
+                <div class="bg-white rounded-3xl p-3 sm:p-5 border-2 border-orange-200 shadow-inner space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-bold">
+                        <span class="text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">Start: ${startVal}</span>
+                        <span class="text-orange-800 bg-orange-100 px-3 py-1 rounded-full border border-orange-300">
+                            Frog at: ${STATE.nlPosition} (Total hopped: +${totalJumped})
+                        </span>
+                        ${mode === 'diff' ? `<span class="text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Goal: ${targetVal}</span>` : ''}
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <svg viewBox="0 0 ${width} 135" class="w-full min-w-[520px] h-auto">
+                            <line x1="${pad - 12}" y1="88" x2="${width - pad + 12}" y2="88" stroke="#334155" stroke-width="3"/>
+                            ${arcsSVG}
+                            ${ticksSVG}
+                            <text x="${frogX}" y="68" text-anchor="middle" font-size="24">🐸</text>
+                        </svg>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+                        <button onclick="hopNumberLine(1)" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded-2xl shadow bounce-hover transition">
+                            🐸 Hop +1
+                        </button>
+                        <button onclick="hopNumberLine(5)" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-2xl shadow bounce-hover transition">
+                            🐸 Big Hop +5
+                        </button>
+                        <button onclick="hopNumberLine(10)" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-2xl shadow bounce-hover transition">
+                            🚀 Giant Hop +10
+                        </button>
+                        <button onclick="resetNumberLine()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-2 rounded-2xl transition text-sm">
+                            ↺ Reset Frog
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHexagonPatternSVG(data) {
+            const { startTriangles } = data;
+            // Draw 3 terms + a mystery 4th box
+            const steps = [startTriangles, startTriangles + 1, startTriangles + 2];
+
+            const renderSingleHex = (triCount, stepLabel) => {
+                // Center hexagon at (75, 85), radius 34
+                const cx = 75, cy = 88, r = 32;
+                // Flat-side or pointy-top hexagon vertices
+                // Using pointy-top so top-right, right, bottom-right edges match the worksheet!
+                const angles = [-90, -30, 30, 90, 150, 210];
+                const pts = angles.map(deg => {
+                    const rad = (deg * Math.PI) / 180;
+                    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+                });
+                const hexPointsStr = pts.map(p => p.join(',')).join(' ');
+
+                // Equilateral triangles attached to outer edges (starting top-left/top-right going clockwise)
+                // Edge indices: 5->0 (top-left), 0->1 (top-right), 1->2 (right), 2->3 (bottom-right), 3->4 (bottom-left), 4->5 (left)
+                const edgeOrder = [[5, 0], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5]];
+                let trianglesSVG = '';
+
+                for (let t = 0; t < triCount; t++) {
+                    const [i1, i2] = edgeOrder[t % 6];
+                    const [x1, y1] = pts[i1];
+                    const [x2, y2] = pts[i2];
+                    const mx = (x1 + x2) / 2;
+                    const my = (y1 + y2) / 2;
+                    // Outward normal from center
+                    const dx = mx - cx;
+                    const dy = my - cy;
+                    const len = Math.hypot(dx, dy);
+                    const triHeight = r * Math.sqrt(3) / 2;
+                    const x3 = mx + (dx / len) * triHeight;
+                    const y3 = my + (dy / len) * triHeight;
+
+                    trianglesSVG += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" fill="#22c55e" stroke="#14532d" stroke-width="2.5"/>`;
+                }
+
+                return `
+                    <div class="flex flex-col items-center bg-rose-50/70 rounded-2xl p-2 border border-rose-200">
+                        <svg viewBox="0 0 150 165" class="w-28 sm:w-32 h-32">
+                            ${trianglesSVG}
+                            <polygon points="${hexPointsStr}" fill="#fde047" stroke="#854d0e" stroke-width="2.5"/>
+                        </svg>
+                        <span class="text-xs font-extrabold text-rose-900 bg-rose-200 px-2.5 py-0.5 rounded-full">${stepLabel}</span>
+                    </div>
+                `;
+            };
+
+            return `
+                <div class="bg-white rounded-3xl p-4 border-2 border-rose-200 shadow-inner">
+                    <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                        ${renderSingleHex(steps[0], 'Step 1')}
+                        <span class="text-2xl font-bold text-rose-400">➔</span>
+                        ${renderSingleHex(steps[1], 'Step 2')}
+                        <span class="text-2xl font-bold text-rose-400">➔</span>
+                        ${renderSingleHex(steps[2], 'Step 3')}
+                        <span class="text-2xl font-bold text-rose-400">➔</span>
+                        <div class="flex flex-col items-center justify-center w-28 sm:w-32 h-36 bg-rose-100 border-2 border-dashed border-rose-400 rounded-2xl">
+                            <span class="text-4xl font-display font-bold text-rose-600">?</span>
+                            <span class="text-xs font-extrabold text-rose-800 mt-2">Step 4</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNumberPatternVisual(data) {
+            const { seq } = data;
+            return `
+                <div class="bg-white rounded-3xl p-5 border-2 border-rose-200 shadow-inner">
+                    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+                        ${seq.map(num => `
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-500 text-white font-display font-bold text-2xl sm:text-3xl flex items-center justify-center shadow-md border-b-4 border-rose-700">
+                                ${num}
+                            </div>
+                            <span class="text-xl font-bold text-rose-400">➔</span>
+                        `).join('')}
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-100 text-amber-700 font-display font-bold text-2xl sm:text-3xl flex items-center justify-center border-2 border-dashed border-amber-500">
+                            ?
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // INTERACTIVE QUESTION HELPERS
+        // ==========================================
+        function toggleSubHelper() {
+            STATE.showSubHelper = !STATE.showSubHelper;
+            render();
+        }
+
+        function hopNumberLine(amount) {
+            const q = STATE.questions[STATE.currentIdx];
+            if (!q || q.type !== 'numberline') return;
+            const nextPos = STATE.nlPosition + amount;
+            if (nextPos <= q.maxLine) {
+                STATE.nlJumps.push({ from: STATE.nlPosition, to: nextPos, amount });
+                STATE.nlPosition = nextPos;
+                render();
+            }
+        }
+
+        function resetNumberLine() {
+            const q = STATE.questions[STATE.currentIdx];
+            if (!q || q.type !== 'numberline') return;
+            STATE.nlPosition = q.startVal;
+            STATE.nlJumps = [];
+            render();
+        }
+
+        // ==========================================
+        // ANSWER CHECKING & PROGRESSION
+        // ==========================================
+        function submitAnswer(selected, btnEvent) {
+            if (STATE.answeredCurrent) return;
+            const q = STATE.questions[STATE.currentIdx];
+            const isCorrect = String(selected) === String(q.answer);
+
+            STATE.answeredCurrent = true;
+            STATE.lastSelected = selected;
+            STATE.lastWasCorrect = isCorrect;
+
+            if (isCorrect) {
+                STATE.sessionScore++;
+                STATE.totalStars++;
+                STATE.skillStars[q.skillId] = (STATE.skillStars[q.skillId] || 0) + 1;
+                updateStarCounter();
+                const rect = btnEvent?.target?.getBoundingClientRect();
+                spawnStars(rect ? rect.left + rect.width / 2 : null, rect ? rect.top : null);
+            } else {
+                STATE.missedQuestions.push(q);
+            }
+
+            render();
+        }
+
+        function nextQuestion() {
+            if (STATE.currentIdx + 1 < STATE.questions.length) {
+                STATE.currentIdx++;
+                setupQuestionState();
+                render();
+            } else {
+                STATE.mode = 'summary';
+                spawnStars(window.innerWidth / 2, window.innerHeight / 3);
+                render();
+            }
+        }
+
+        // ==========================================
+        // SCREEN VIEWS
+        // ==========================================
+        function renderHome() {
+            return `
+                <div class="animate-pop space-y-6">
+                    <!-- Welcome Hero Banner -->
+                    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-lg border-4 border-sky-300 text-center relative overflow-hidden">
+                        <div class="inline-block bg-amber-100 text-amber-800 font-extrabold text-xs sm:text-sm px-4 py-1 rounded-full border border-amber-300 mb-2">
+                            Grade 2 Math • Unit 3 Test Prep
+                        </div>
+                        <h2 class="text-2xl sm:text-4xl font-bold text-slate-800 mb-2">
+                            Ready to Master Measuring & Patterns? 🚀
+                        </h2>
+                        <p class="text-slate-600 font-semibold max-w-xl mx-auto text-sm sm:text-base mb-6">
+                            Pick a skill island below to practice, or take the <span class="text-sky-700 font-bold">Mix It Up Practice Test</span> to earn bonus stars!
+                        </p>
+
+                        <button onclick="startSkill('mix')" class="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 hover:from-amber-500 hover:to-rose-600 text-white font-display font-bold text-lg sm:text-xl px-8 py-4 rounded-2xl shadow-lg border-b-4 border-rose-700 bounce-hover transition inline-flex items-center gap-3">
+                            <span>🏆</span>
+                            <span>Mix It Up (10-Question Practice Test)</span>
+                        </button>
+                    </div>
+
+                    <!-- 5 Skill Modules Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${SKILLS.map(skill => `
+                            <button onclick="startSkill(${skill.id})" class="bg-white hover:bg-slate-50 text-left rounded-3xl p-5 shadow-md border-4 border-white hover:border-sky-300 bounce-hover transition flex items-start gap-4 group">
+                                <div class="${skill.color} text-white text-3xl w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                    ${skill.icon}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between gap-2 mb-1">
+                                        <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full ${skill.badgeColor}">
+                                            ${skill.code}
+                                        </span>
+                                        <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                            ⭐ ${STATE.skillStars[skill.id]}
+                                        </span>
+                                    </div>
+                                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 group-hover:text-sky-700 transition">
+                                        ${skill.title}
+                                    </h3>
+                                    <p class="text-xs sm:text-sm text-slate-600 font-semibold mt-0.5">
+                                        ${skill.desc}
+                                    </p>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuiz() {
+            const q = STATE.questions[STATE.currentIdx];
+            const skillInfo = SKILLS.find(s => s.id === q.skillId);
+            const progressPct = Math.round(((STATE.currentIdx + (STATE.answeredCurrent ? 1 : 0)) / STATE.questions.length) * 100);
+
+            let visualHTML = '';
+            if (q.skillId === 1) {
+                visualHTML = renderRulerSVG(q.visualData);
+            } else if (q.skillId === 2) {
+                visualHTML = `
+                    <div class="bg-emerald-50 rounded-3xl p-4 border-2 border-emerald-200 flex items-center justify-center gap-4 text-center">
+                        <span class="text-4xl">📏</span>
+                        <div class="text-left text-xs sm:text-sm font-bold text-emerald-900">
+                            <p>• <strong>Inch (in):</strong> Small things (paperclip, crayon, notebook)</p>
+                            <p>• <strong>Foot (ft):</strong> Medium things (TV, table, person)</p>
+                            <p>• <strong>Yard (yd):</strong> Big distances (classroom, playground)</p>
+                        </div>
+                    </div>`;
+            } else if (q.skillId === 3) {
+                visualHTML = renderComparisonVisual(q.visualData);
+            } else if (q.skillId === 4) {
+                visualHTML = renderInteractiveNumberLine(q);
+            } else if (q.skillId === 5) {
+                visualHTML = q.type === 'pattern-shape'
+                    ? renderHexagonPatternSVG(q.visualData)
+                    : renderNumberPatternVisual(q.visualData);
+            }
+
+            return `
+                <div class="animate-pop space-y-5">
+                    <!-- Top Progress Bar -->
+                    <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border-2 border-slate-200">
+                        <div class="flex items-center justify-between text-xs sm:text-sm font-extrabold text-slate-600 mb-2">
+                            <span class="flex items-center gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-full ${skillInfo.badgeColor}">${skillInfo.code}</span>
+                                <span>${skillInfo.title}</span>
+                            </span>
+                            <span>Question ${STATE.currentIdx + 1} of ${STATE.questions.length}</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                            <div style="width: ${progressPct}%" class="bg-gradient-to-r from-sky-400 to-emerald-400 h-full rounded-full transition-all duration-500"></div>
+                        </div>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-lg border-4 border-sky-200 space-y-5">
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug">
+                            ${q.prompt}
+                        </h2>
+
+                        <!-- Visual Aid -->
+                        ${visualHTML}
+
+                        <!-- Answer Choices Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            ${q.options.map(opt => {
+                                const isThisSelected = String(opt) === String(STATE.lastSelected);
+                                const isThisCorrect = String(opt) === String(q.answer);
+                                let btnStyle = 'bg-slate-50 hover:bg-sky-50 border-slate-300 hover:border-sky-400 text-slate-800';
+
+                                if (STATE.answeredCurrent) {
+                                    if (isThisCorrect) {
+                                        btnStyle = 'bg-emerald-500 border-emerald-700 text-white scale-[1.02] shadow-md';
+                                    } else if (isThisSelected && !isThisCorrect) {
+                                        btnStyle = 'bg-rose-500 border-rose-700 text-white opacity-90';
+                                    } else {
+                                        btnStyle = 'bg-slate-100 border-slate-200 text-slate-400';
+                                    }
+                                }
+
+                                return `
+                                    <button
+                                        onclick="submitAnswer('${String(opt).replace(/'/g, "\\'")}', event)"
+                                        ${STATE.answeredCurrent ? 'disabled' : ''}
+                                        class="p-4 rounded-2xl border-b-4 border-2 font-display font-bold text-lg sm:text-xl transition bounce-hover flex items-center justify-between ${btnStyle}">
+                                        <span>${opt}</span>
+                                        ${STATE.answeredCurrent && isThisCorrect ? '<span>✅</span>' : ''}
+                                        ${STATE.answeredCurrent && isThisSelected && !isThisCorrect ? '<span>❌</span>' : ''}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- Feedback & Next Button -->
+                        ${STATE.answeredCurrent ? `
+                            <div class="animate-pop rounded-2xl p-4 border-2 ${STATE.lastWasCorrect ? 'bg-emerald-50 border-emerald-300 text-emerald-950' : 'bg-amber-50 border-amber-300 text-amber-950'} flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div class="space-y-1 text-center sm:text-left">
+                                    <p class="font-display font-bold text-lg sm:text-xl">
+                                        ${STATE.lastWasCorrect ? '🌟 Awesome Job! You earned a star!' : '💡 Good try! Let’s check the clue:'}
+                                    </p>
+                                    <p class="text-sm sm:text-base font-semibold">
+                                        ${q.hint}
+                                    </p>
+                                </div>
+                                <button onclick="nextQuestion()" class="shrink-0 bg-sky-600 hover:bg-sky-700 text-white font-display font-bold text-lg px-6 py-3 rounded-2xl shadow-md border-b-4 border-sky-800 bounce-hover transition">
+                                    ${STATE.currentIdx + 1 < STATE.questions.length ? 'Next Question ➔' : 'See My Results 🏆'}
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSummary() {
+            const totalQ = STATE.questions.length;
+            const pct = Math.round((STATE.sessionScore / totalQ) * 100);
+            let badgeTitle = 'Super Measurer!';
+            let badgeEmoji = '🏆';
+            if (pct === 100) {
+                badgeTitle = 'Unit 3 Math Champion!';
+                badgeEmoji = '👑';
+            } else if (pct < 60) {
+                badgeTitle = 'Great Practice Explorer!';
+                badgeEmoji = '🌟';
+            }
+
+            return `
+                <div class="animate-pop bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-4 border-amber-300 text-center space-y-6">
+                    <div class="text-6xl sm:text-7xl">${badgeEmoji}</div>
+                    <div>
+                        <h2 class="text-3xl sm:text-4xl font-bold text-slate-800">${badgeTitle}</h2>
+                        <p class="text-slate-600 font-bold text-lg mt-1">
+                            You scored <span class="text-emerald-600">${STATE.sessionScore} out of ${totalQ}</span> (${pct}%)!
+                        </p>
+                    </div>
+
+                    <!-- Stars Earned Overview -->
+                    <div class="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 max-w-md mx-auto">
+                        <p class="font-bold text-amber-900 text-sm uppercase tracking-wider mb-3">Total Stars Collected</p>
+                        <div class="grid grid-cols-5 gap-2">
+                            ${SKILLS.map(s => `
+                                <div class="bg-white rounded-xl p-2 border border-amber-200 flex flex-col items-center">
+                                    <span class="text-xl">${s.icon}</span>
+                                    <span class="font-display font-bold text-amber-700 text-sm mt-1">⭐ ${STATE.skillStars[s.id]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap items-center justify-center gap-4 pt-2">
+                        ${STATE.missedQuestions.length > 0 ? `
+                            <button onclick="retryMissed()" class="bg-amber-500 hover:bg-amber-600 text-white font-display font-bold text-lg px-6 py-3.5 rounded-2xl shadow-md border-b-4 border-amber-700 bounce-hover transition">
+                                🔄 Retry Missed Questions (${STATE.missedQuestions.length})
+                            </button>
+                        ` : ''}
+                        <button onclick="startSkill('${STATE.currentSkillId}')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-display font-bold text-lg px-6 py-3.5 rounded-2xl shadow-md border-b-4 border-emerald-700 bounce-hover transition">
+                            🎲 Play Again (New Numbers)
+                        </button>
+                        <button onclick="goHome()" class="bg-sky-500 hover:bg-sky-600 text-white font-display font-bold text-lg px-6 py-3.5 rounded-2xl shadow-md border-b-4 border-sky-700 bounce-hover transition">
+                            🏠 Back to Skill Menu
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // MAIN RENDER LOOP
+        // ==========================================
+        function render() {
+            const container = document.getElementById('app-container');
+            if (STATE.mode === 'home') {
+                container.innerHTML = renderHome();
+            } else if (STATE.mode === 'quiz') {
+                container.innerHTML = renderQuiz();
+            } else if (STATE.mode === 'summary') {
+                container.innerHTML = renderSummary();
+            }
+        }
+
+        // Initialize app
+        window.onload = function () {
+            render();
+        };
+    </script>
+</body>
+</html>
+```
